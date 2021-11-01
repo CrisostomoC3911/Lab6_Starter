@@ -1,13 +1,14 @@
 class RecipeCard extends HTMLElement {
   constructor() {
     // Part 1 Expose - TODO
-
+    super();
     // You'll want to attach the shadow DOM here
+    this.shadow = this.attachShadow({ mode: "open" });
   }
 
   set data(data) {
     // This is the CSS that you'll use for your recipe cards
-    const styleElem = document.createElement('style');
+    const styleElem = document.createElement("style");
     const styles = `
       * {
         font-family: sans-serif;
@@ -84,9 +85,93 @@ class RecipeCard extends HTMLElement {
       }
     `;
     styleElem.innerHTML = styles;
-
     // Here's the root element that you'll want to attach all of your other elements to
-    const card = document.createElement('article');
+    const card = document.createElement("article");
+    // const wrapper = card.attachShadow({mode: 'open'});
+    this.shadow.appendChild(card);
+    card.appendChild(styleElem);
+
+    // Here's the image element. We append it to the card
+    const recipeImage = document.createElement("img");
+    recipeImage.setAttribute("src", getImageUrl(data));
+    recipeImage.setAttribute("alt", getCaption(data));
+    card.appendChild(recipeImage);
+
+    // Here's the title container.
+    const title = document.createElement("p");
+    title.setAttribute("class", "title");
+
+    // Here's the title with link.
+    const titleLink = document.createElement("a");
+    titleLink.setAttribute("href", getUrl(data));
+    titleLink.innerHTML = getHeadline(data);
+
+    //We append title with link to the title container, then the title container to root
+    title.appendChild(titleLink);
+    card.appendChild(title);
+
+    // Here's the organization.
+    const organization = document.createElement("p");
+    organization.setAttribute("class", "organization");
+    organization.innerHTML = getOrganization(data);
+    card.appendChild(organization);
+
+    //Here's the rating container
+    const rating = document.createElement("div");
+    rating.setAttribute("class", "rating");
+
+    //Here's the rating container's children
+    const ratingValue = document.createElement("span");
+    ratingValue.innerHTML = getRatingValue(data);
+    const ratingImage = document.createElement("img");
+
+    if (isNaN(Number(ratingValue))) {
+      console.log("this is nan");
+      const ratingNan = document.createElement("span");
+      ratingNan.innerHTML = "No Reviews";
+      rating.appendChild(ratingNan);
+    } else {
+      ratingImage.setAttribute(
+        "src",
+        `assets/images/icons/${String(
+          Math.round(Number(ratingValue))
+        )}-star.svg`
+      );
+      ratingImage.setAttribute(
+        "alt",
+        `${String(Math.round(Number(ratingValue)))} stars`
+      );
+      const ratingCount = document.createElement("span");
+      ratingCount.innerHTML = getRatingCount(data);
+      rating.appendChild(ratingValue);
+      rating.appendChild(ratingImage);
+      rating.appendChild(ratingCount);
+    }
+
+    // ratingImage.setAttribute(
+    //   "src",
+    //   `assets/images/icons/${String(Math.round(Number(ratingValue)))}-star.svg`
+    // );
+    // ratingImage.setAttribute(
+    //   "alt",
+    //   `${String(Math.round(Number(ratingValue)))} stars`
+    // );
+
+    //We append all the children to the rating container. We then append rating container to root
+
+    card.appendChild(rating);
+
+    //Here is time. We have to convert to normal time text so we use convertTime function
+    const timeOfRecipe = document.createElement("time");
+
+    timeOfRecipe.innerHTML = convertTime(getTime(data));
+    card.appendChild(timeOfRecipe);
+
+    //Here is ingredients
+    const ingredients = document.createElement("p");
+    ingredients.setAttribute("class", "ingredients");
+    ingredients.innerHTML = createIngredientList(getIngredients(data));
+    card.appendChild(ingredients);
 
     // Some functions that will be helpful here:
     //    document.createElement()
@@ -98,11 +183,10 @@ class RecipeCard extends HTMLElement {
 
     // Make sure to attach your root element and styles to the shadow DOM you
     // created in the constructor()
-
+    this.shadow.appendChild(card);
     // Part 1 Expose - TODO
   }
 }
-
 
 /*********************************************************************/
 /***                       Helper Functions:                       ***/
@@ -123,7 +207,7 @@ function searchForKey(object, key) {
       value = object[k];
       return true;
     }
-    if (object[k] && typeof object[k] === 'object') {
+    if (object[k] && typeof object[k] === "object") {
       value = searchForKey(object[k], key);
       return value !== undefined;
     }
@@ -137,12 +221,101 @@ function searchForKey(object, key) {
  * @returns {String} If found, it returns the URL as a string, otherwise null
  */
 function getUrl(data) {
-  if (data.url) return data.url;
-  if (data['@graph']) {
-    for (let i = 0; i < data['@graph'].length; i++) {
-      if (data['@graph'][i]['@type'] == 'Article') return data['@graph'][i]['@id'];
+  /*if (data.url) return data.url;
+  if (data["@graph"]) {
+    for (let i = 0; i < data["@graph"].length; i++) {
+      if (data["@graph"][i]["@type"] == "Article")
+        return data["@graph"][i]["@id"];
     }
-  };
+  }
+  return null;*/
+  if (data["url"]) {
+    console.log(data["url"]);
+    return data["url"];
+  }
+  console.log("no id was taken");
+  return null;
+}
+
+function getHeadline(data) {
+  if (data["headline"]) {
+    return data["headline"];
+  }
+
+  return null;
+}
+
+function getOrganizationName(data) {
+  if (data["@type"] == "Organization" && data["name"]) {
+    return data["name"];
+  }
+
+  return null;
+}
+
+function getRatingValue(data) {
+  if (
+    data["@type"] == "Recipe" &&
+    data["aggregateRating"] &&
+    data["aggregateRating"]["ratingValue"]
+  ) {
+    return data["aggregateRating"]["ratingValue"];
+  }
+  return null;
+}
+
+function getRatingCount(data) {
+  if (
+    data["@type"] == "Recipe" &&
+    data["aggregateRating"] &&
+    data["aggregateRating"]["ratingCount"]
+  ) {
+    return data["aggregateRating"]["ratingCount"];
+  }
+  return null;
+}
+
+function getTime(data) {
+  if (data["totalTime"]) {
+    return data["totalTime"];
+  } else if (data["@graph"]) {
+    for (let i = 0; i < data["@graph"].length; i++) {
+      if (data["@graph"][i]["@type"] == "Recipe")
+        return data["@graph"][i]["totalTime"];
+    }
+  }
+  return null;
+}
+
+function getIngredients(data) {
+  if (data["@type"] == "Recipe") {
+    return data["recipeIngredient"];
+  }
+
+  return null;
+}
+
+function getImageUrl(data) {
+  if (
+    data["image"] &&
+    data["image"]["@type"] == "ImageObject" &&
+    data["image"]["url"]
+  ) {
+    return data["image"]["url"];
+  }
+
+  return null;
+}
+
+function getCaption(data) {
+  if (
+    data["image"] &&
+    data["image"]["@type"] == "ImageObject" &&
+    data["image"]["caption"]
+  ) {
+    return data["image"]["caption"];
+  }
+
   return null;
 }
 
@@ -154,13 +327,13 @@ function getUrl(data) {
  */
 function getOrganization(data) {
   if (data.publisher?.name) return data.publisher?.name;
-  if (data['@graph']) {
-    for (let i = 0; i < data['@graph'].length; i++) {
-      if (data['@graph'][i]['@type'] == 'Organization') {
-        return data['@graph'][i].name;
+  if (data["@graph"]) {
+    for (let i = 0; i < data["@graph"].length; i++) {
+      if (data["@graph"][i]["@type"] == "Organization") {
+        return data["@graph"][i].name;
       }
     }
-  };
+  }
   return null;
 }
 
@@ -171,25 +344,27 @@ function getOrganization(data) {
  * @return {String} formatted time string
  */
 function convertTime(time) {
-  let timeStr = '';
-
+  let timeStr = "";
+  //console.log(time);
   // Remove the 'PT'
   time = time.slice(2);
 
-  let timeArr = time.split('');
-  if (time.includes('H')) {
+  let timeArr = time.split("");
+  if (time.includes("H")) {
+    console.log("has H");
+    console.log(time);
     for (let i = 0; i < timeArr.length; i++) {
-      if (timeArr[i] == 'H') return `${timeStr} hr`;
+      if (timeArr[i] == "H") return `${timeStr} hr`;
       timeStr += timeArr[i];
     }
   } else {
     for (let i = 0; i < timeArr.length; i++) {
-      if (timeArr[i] == 'M') return `${timeStr} min`;
+      if (timeArr[i] == "M") return `${timeStr} min`;
       timeStr += timeArr[i];
     }
   }
 
-  return '';
+  return "";
 }
 
 /**
@@ -200,7 +375,7 @@ function convertTime(time) {
  * @return {String} the string comma separate list of ingredients from the array
  */
 function createIngredientList(ingredientArr) {
-  let finalIngredientList = '';
+  let finalIngredientList = "";
 
   /**
    * Removes the quantity and measurement from an ingredient string.
@@ -208,14 +383,14 @@ function createIngredientList(ingredientArr) {
    * (sometimes there isn't, so this would fail on something like '2 apples' or 'Some olive oil').
    * For the purposes of this lab you don't have to worry about those cases.
    * @param {String} ingredient the raw ingredient string you'd like to process
-   * @return {String} the ingredient without the measurement & quantity 
+   * @return {String} the ingredient without the measurement & quantity
    * (e.g. '1 cup flour' returns 'flour')
    */
   function _removeQtyAndMeasurement(ingredient) {
-    return ingredient.split(' ').splice(2).join(' ');
+    return ingredient.split(" ").splice(2).join(" ");
   }
 
-  ingredientArr.forEach(ingredient => {
+  ingredientArr.forEach((ingredient) => {
     ingredient = _removeQtyAndMeasurement(ingredient);
     finalIngredientList += `${ingredient}, `;
   });
@@ -226,4 +401,4 @@ function createIngredientList(ingredientArr) {
 
 // Define the Class so you can use it as a custom element.
 // This is critical, leave this here and don't touch it
-customElements.define('recipe-card', RecipeCard);
+customElements.define("recipe-card", RecipeCard);

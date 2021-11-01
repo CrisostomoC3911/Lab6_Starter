@@ -17,13 +17,21 @@ window.addEventListener('DOMContentLoaded', init);
 
 // This is the first function to be called, so when you are tracing your code start here.
 async function init() {
+  console.log("initi");
+  //console.log(recipeData);
   // fetch the recipes and wait for them to load
   let fetchSuccessful = await fetchRecipes();
+  console.log("send help");
+  console.log(typeof recipeData);
+  console.log(recipeData);
   // if they didn't successfully load, quit the function
   if (!fetchSuccessful) {
     console.log('Recipe fetch unsuccessful');
     return;
   };
+  
+
+
   // Add the first three recipe cards to the page
   createRecipeCards();
   // Make the "Show more" button functional
@@ -41,9 +49,36 @@ async function fetchRecipes() {
 
     // For part 2 - note that you can fetch local files as well, so store any JSON files you'd like to fetch
     // in the recipes folder and fetch them from there. You'll need to add their paths to the recipes array.
+    
 
     // Part 1 Expose - TODO
-  });
+      var size = recipes.length;
+      for (let i = 0; i < recipes.length; i++) {
+      const newurl = recipes[i];
+
+      console.log(newurl);
+        fetch(newurl)
+          .then((response) => {
+            return response.json();
+          })
+          .then((data) => {
+            console.log(data);
+            recipeData[newurl] = data;
+            //console.log(data);
+            console.log(i);
+            if (i == 2) {
+              //console.log("resolved");
+              //console.log(recipeData);
+              resolve(true); 
+            }
+            
+          })
+          .catch((error) => {
+            reject(false);
+            console.log("Error");
+          })
+    }
+});
 }
 
 function createRecipeCards() {
@@ -54,6 +89,24 @@ function createRecipeCards() {
   // show any others you've added when the user clicks on the "Show more" button.
 
   // Part 1 Expose - TODO
+  console.log(recipeData);
+  //</recipe-card>var size = recipeData.length;
+  //for (const someData in recipeData) {
+    console.log(Object.keys(recipeData).length);
+    Object.keys(recipeData).forEach(key => {
+      console.log(key);
+    });
+  // for (const someData in recipeData){
+  Object.keys(recipeData).forEach( someData => {
+    console.log(someData);
+    const recipeCardElement = document.createElement("recipe-card");
+    console.log(recipeData[someData]);
+    recipeCardElement.data = recipeData[someData];
+    document.querySelector("main").appendChild(recipeCardElement);
+  });
+   
+ // }
+  
 }
 
 function bindShowMore() {
